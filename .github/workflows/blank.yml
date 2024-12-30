@@ -1,11 +1,10 @@
-name: nodeseek鸡腿签到
-
 on:
   push:
     branches:
       - main  # 在 main 分支上进行推送时触发 
   schedule:
-    - cron: '00 16 * * *'  # 每天凌晨 12 点执行 
+    - cron: '00 00 * * *'  # 每天北京时间早上 8 点执行
+  workflow_dispatch:  # 添加这行以允许手动触发 
 
 jobs:
   run-nodeseek-sign:
