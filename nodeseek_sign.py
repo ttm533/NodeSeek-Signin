@@ -1,7 +1,6 @@
 # -- coding: utf-8 --
 import os
 import sys
-from datetime import datetime
 from curl_cffi import requests
 
 # 环境变量配置
@@ -16,36 +15,39 @@ telegram_bot_token = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 chat_id = os.environ.get("CHAT_ID", "")
 telegram_api_url = os.environ.get("TELEGRAM_API_URL", "https://api.telegram.org")  # Telegram 代理API
 
-# 获取当前时间
-def get_current_time():
-    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
 # Telegram 推送函数
 def telegram_Bot(token, chat_id, message):
     """Telegram 推送"""
+    # 在消息中添加 NodeSeek 标识
+    message = f"NodeSeek: {message}"
+    
     url = f'{telegram_api_url}/bot{token}/sendMessage'
     data = {
         'chat_id': chat_id,
-        'text': message,
-        'parse_mode': 'Markdown'  # 使用 Markdown 格式化
+        'text': message
     }
+    
     try:
         r = requests.post(url, json=data)
         response_data = r.json()
-        print(f"Telegram推送结果：{response_data.get('ok', False)}\n")
+        msg = response_data['ok']
+        print(f"Telegram推送结果：{msg}\n")
     except Exception as e:
         print(f"Telegram推送失败：{e}")
 
 # PushPlus 推送函数
 def pushplus_ts(token, rw, msg):
     """PushPlus 推送"""
+    # 在消息中添加 NodeSeek 标识
+    msg = f"NodeSeek: {msg}"
+    
     url = 'https://www.pushplus.plus/send/'
     data = {
         "token": token,
         "title": rw,
-        "content": msg,
-        "template": "markdown"  # 使用 Markdown 格式化
+        "content": msg
     }
+    
     try:
         r = requests.post(url, json=data)
         msg = r.json().get('msg', None)
@@ -95,45 +97,30 @@ if COOKIE_ENV:
         response = requests.post(url, headers=headers, impersonate="chrome110")
         response_data = response.json()
         print(response_data)
+        print(COOKIE_ENV)
         
-        # 获取签到结果
-        success = response_data.get('success', False)
-        message = response_data.get('message', '无签到信息')
-        gain = response_data.get('gain', 0)
-        current = response_data.get('current', 0)
-
-        # 处理签到状态和奖励
-        status = "✅ 成功" if success else "❌ 失败"
-        reward = f"{gain} 个鸡腿" if success else "无奖励"
-        date = datetime.now().strftime("%Y-%m-%d") if success else "未知"
-
-        # 格式化通知消息
-        formatted_message = (
-            f"--------------------------------------\n"
-            f"*平台*: NodeSeek\n"
-            f"*时间*: {get_current_time()}\n"
-            f"*签到状态*: {status}\n"
-            f"*签到日期*: {date}\n"
-            f"*今日签到奖励*: {reward}\n"
-            f"*累计鸡腿*: {current}\n"
-            f"--------------------------------------"
-        )
-
-        # 本地打印消息
-        print(formatted_message)
-
-        # 检查推送渠道
-        if not telegram_bot_token and not pushplus_token:
-            print("无推送渠道，请检查通知变量是否正确")
-        else:
-            # 推送通知
+        # 获取响应信息
+        message = response_data.get('message')
+        success = response_data.get('success')
+        
+        # 发送通知
+        send("nodeseek签到", message)
+        
+        if success == "true":
+            print(message)
+            # 如果 Telegram 配置有效，发送 Telegram 通知
             if telegram_bot_token and chat_id:
-                telegram_Bot(telegram_bot_token, chat_id, formatted_message)
-
+                telegram_Bot(telegram_bot_token, chat_id, message)
+        else:
+            print(message)
+            # 如果 Telegram 配置有效，发送 Telegram 通知
+            if telegram_bot_token and chat_id:
+                telegram_Bot(telegram_bot_token, chat_id, message)
+            # 如果 PushPlus 配置有效，发送 PushPlus 通知
             if pushplus_token:
-                pushplus_ts(pushplus_token, "NodeSeek签到", formatted_message)
-
+                pushplus_ts(pushplus_token, "nodeseek签到", message)
     except Exception as e:
         print("发生异常:", e)
+        print("实际响应内容:", response.text)
 else:
     print("请先设置Cookie")
